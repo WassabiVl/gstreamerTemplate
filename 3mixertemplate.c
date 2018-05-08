@@ -26,18 +26,19 @@ typedef struct _CustomData {
 	GstElement *fpssink;
 	GstElement *source1,*source2,*source3; //the input sources
 	GstElement *convert;
-	GstElement *sink1, sink2;
+	GstElement *sink1, *sink2,*sink3;
 	GstElement *playbin;   /* the simple way to start a pipeline */
-	GstElement *scale,*filter,tee;
+	GstElement *scale,*filter,*tee;
 	GstElement *videobox1,*videobox2,*videobox3;
 	GstElement *mixer1,*mixer2,*mixer3;
-	GstElement **clrspace,*sink, *video_queue;
+	GstElement **clrspace,*sink, *video_queue, *audio_queue;
 	gboolean playing;      /* Are we in the PLAYING state? */
 	gboolean terminate;    /* Should we terminate execution? */
 	gboolean seek_enabled; /* Is seeking enabled for this media? */
 	gboolean seek_done;    /* Have we performed the seek already? */
 	gint64 duration;       /* How long does this media last, in nanoseconds */
-} CustomData;
+	gboolean flag_fps;
+	} CustomData;
 
 /*************************************************************************
  * Handler for the pad-added signal
@@ -194,6 +195,7 @@ int main(int argc, char *argv[]) {
 	gboolean terminate = FALSE;
 	GMainLoop *loop;
 	//
+	data.flag_fps =0;
 	data.playing = FALSE;
 	data.terminate = FALSE;
 	data.seek_enabled = FALSE;
@@ -238,9 +240,9 @@ int main(int argc, char *argv[]) {
 	data.sink1 = gst_element_factory_make ("fpsdisplaysink", "sink1");
 	data.sink2 = gst_element_factory_make ("fpsdisplaysink", "sink2");
 	data.sink3 = gst_element_factory_make ("fpsdisplaysink", "sink3");
-	tee name=snow
+	//data.tee name=snow;
 	data.tee = gst_element_factory_make ("tee", "snow");
-	video_queue = gst_element_factory_make ("queue", "video_queue");
+	data.video_queue = gst_element_factory_make ("queue", "video_queue");
 	/**
 	 * 3) Create the empty pipeline
 	 **/
@@ -261,7 +263,7 @@ int main(int argc, char *argv[]) {
 	}else if (!data.convert) {
 		g_printerr ("converter could not be created.\n");
 		return -1;
-	}else if (!data.fpssink1 || !data.fpssink2 || !data.fpssink3) {
+	}else if (!data.fpssink) {
 		g_printerr ("fpssink could not be created.\n");
 		return -1;
 	}else if (!data.scale) {
@@ -284,9 +286,9 @@ int main(int argc, char *argv[]) {
 	*/
 	filtercaps = gst_caps_new_simple ("video/x-raw-yuv",
           "width", G_TYPE_INT, 1280,
-          "height", G_TYPE_INT, 720
+          "height", G_TYPE_INT, 720,
           NULL);
-  g_object_set (G_OBJECT (filter), "caps", filtercaps, NULL);
+  g_object_set (G_OBJECT (data.filter), "caps", filtercaps, NULL);
 
 	/**
 	* Manually link the mixer, which has "Request" pads
@@ -294,9 +296,9 @@ int main(int argc, char *argv[]) {
 	* you'll see that videomixer's sink pads are request pads.
 	* You need to create these pads before linking them.
 	*/
-	mixer_sink_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (mixer1), "sink_%u");
-	mixer_sink_pad = gst_element_request_pad (mixer1, mixer_sink_pad_template, NULL, NULL);
-	sink_pad = gst_element_get_static_pad (clrspace, "src");
+	GstPadTemplate* mixer_sink_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (data.mixer1), "sink_%u");
+	GstPad* mixer_sink_pad = gst_element_request_pad (data.mixer1, mixer_sink_pad_template, NULL, NULL);
+	GstPad* sink_pad = gst_element_get_static_pad (data.clrspace, "src");
 	gst_pad_link ( sink_pad,mixer_sink_pad);
 
 	/**
@@ -306,14 +308,14 @@ int main(int argc, char *argv[]) {
 	//	pipeline = gst_parse_launch ("playbin uri=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm", NULL);
 	// building with multiple items
 	// has to be similar to the cli one
-	gst_bin_add_many (GST_BIN (data.pipeline), data.source1, data.convert1, data.sink1, NULL);
+	gst_bin_add_many (GST_BIN (data.pipeline), data.source1, data.convert, data.sink1, NULL);
 
 	/**
 	 * 6) check if the output (sink) and input (source) can be linked
 	 * or if the converter can be linked to the output
 	 **/
 	// always start with this
-	if (!gst_element_link (data.convert1, data.sink1)) {
+	if (!gst_element_link (data.convert, data.sink1)) {
 		g_printerr ("converter and sink could not be linked.\n");
 		gst_object_unref (data.pipeline);
 		return -1;
@@ -324,24 +326,24 @@ int main(int argc, char *argv[]) {
 	 * Properties are read from with g_object_get() and written to with g_object_set()
 	 **/
 	 // videotestsrc pattern=snow
-	 g_object_set (G_OBJECT (data.source1), "pattern", snow, NULL);
+	 g_object_set (G_OBJECT (data.source1), "pattern", "snow", NULL);
 
 	 /* Add feature FPS for video-sink */
-  if (flag_fps) {
-    g_object_set (G_OBJECT (data.fpssink), "text-overlay", FALSE, "video-sink", sink, NULL); }
+  if (data.flag_fps) {
+    g_object_set (G_OBJECT (data.fpssink), "text-overlay", FALSE, "video-sink", data.sink, NULL); }
 
 		/* Link the elements together */
   /* file-source -> h264-parser -> h264-decoder -> video-output */
-  if (flag_fps) {
+  if (data.flag_fps) {
     if (gst_element_link_many (data.source1, data.filter, data.videobox1, data.mixer1, data.fpssink, NULL)) {
       g_printerr ("Elements could not be linked.\n");
-      gst_object_unref (pipeline);
+      gst_object_unref (data.pipeline);
       return -1;
     }
   } else {
     if (gst_element_link_many (data.source1, data.filter, data.videobox1, data.mixer1, data.sink1, NULL) != TRUE) {
       g_printerr ("Elements could not be linked.\n");
-      gst_object_unref (pipeline);
+      gst_object_unref (data.pipeline);
       return -1;
     }
   }
@@ -352,19 +354,19 @@ int main(int argc, char *argv[]) {
 	 * this is needed if there is a delay between the input stream and the data converted form the codex
 	 * this calls the external functions that handles the data
 	 **/
-	g_signal_connect (data.source, "pad-added", G_CALLBACK (pad_added_handler), &data);
+	g_signal_connect (data.source1, "pad-added", G_CALLBACK (pad_added_handler), &data);
 
 	/* Manually link the Tee, which has "Request" pads */
-	  tee_audio_pad = gst_element_get_request_pad (tee, "src_%u");
+	  GstPad* tee_audio_pad = gst_element_get_request_pad (data.tee, "src_%u");
 	  g_print ("Obtained request pad %s for audio branch.\n", gst_pad_get_name (tee_audio_pad));
-	  queue_audio_pad = gst_element_get_static_pad (audio_queue, "sink");
-	  tee_video_pad = gst_element_get_request_pad (tee, "src_%u");
+	  GstPad* queue_audio_pad = gst_element_get_static_pad (data.audio_queue, "sink");
+	  GstPad* tee_video_pad = gst_element_get_request_pad (data.tee, "src_%u");
 	  g_print ("Obtained request pad %s for video branch.\n", gst_pad_get_name (tee_video_pad));
-	  queue_video_pad = gst_element_get_static_pad (video_queue, "sink");
+	  GstPad* queue_video_pad = gst_element_get_static_pad (data.video_queue, "sink");
 	  if (gst_pad_link (tee_audio_pad, queue_audio_pad) != GST_PAD_LINK_OK ||
 	      gst_pad_link (tee_video_pad, queue_video_pad) != GST_PAD_LINK_OK) {
 	    g_printerr ("Tee could not be linked.\n");
-	    gst_object_unref (pipeline);
+	    gst_object_unref (data.pipeline);
 	    return -1;
 	  }
 	  gst_object_unref (queue_audio_pad);

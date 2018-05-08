@@ -1794,6 +1794,8 @@ add_executable(template
         x86_64/lib/gstreamer-1.0/include/gst/gl/gstglconfig.h
         x86_64/lib/libffi-3.99999/include/ffi.h
         x86_64/lib/libffi-3.99999/include/ffitarget.h
+        3mixertemplate.c
+        GuiIntegration.c
         introduction.c
         "template to g-streamer.c"
         TutorialOfPlayBin.c)
