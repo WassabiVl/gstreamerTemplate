@@ -1795,4 +1795,5 @@ add_executable(template
         x86_64/lib/libffi-3.99999/include/ffi.h
         x86_64/lib/libffi-3.99999/include/ffitarget.h
         introduction.c
-        "template to g-streamer.c")
+        "template to g-streamer.c"
+        TutorialOfPlayBin.c)
