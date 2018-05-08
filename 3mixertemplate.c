@@ -11,6 +11,11 @@
 //  net.  ! queue ! mix3.
 #include <gst/gst.h>
 #include <glib.h>
+#include <gst/audio/audio.h>
+#include <string.h>
+
+#define CHUNK_SIZE 1024   /* Amount of bytes we are sending in each buffer */
+#define SAMPLE_RATE 44100 /* Samples per second we are sending */
 
 /**
  * Structure to contain all our information,
@@ -18,10 +23,10 @@
  **/
 typedef struct _CustomData {
 	GstElement *pipeline;
-	GstElement *fpssink1,*fpssink2,*fpssink3;
+	GstElement *fpssink;
 	GstElement *source1,*source2,*source3; //the input sources
 	GstElement *convert;
-	GstElement *sink;
+	GstElement *sink1, sink2;
 	GstElement *playbin;   /* the simple way to start a pipeline */
 	GstElement *scale,*filter;
 	GstElement *videobox1,*videobox2,*videobox3;
@@ -224,15 +229,15 @@ int main(int argc, char *argv[]) {
 	data.mixer2 = gst_element_factory_make ("videomixer", "mixer2");
 	data.mixer3 = gst_element_factory_make ("videomixer", "mixer3");
 	// fpsdisplaysink sync=false naybe just one needed?
-	data.fpssink1 = gst_element_factory_make ("fpsdisplaysink1", NULL);
-	data.fpssink1 = gst_element_factory_make ("fpsdisplaysink1", NULL);
-	data.fpssink1 = gst_element_factory_make ("fpsdisplaysink1", NULL);
+	data.fpssink = gst_element_factory_make ("fpsdisplaysink", NULL);
 	// the convector element needed
 	data.convert = gst_element_factory_make ("audioconvert", "convert");
 	// the output element needed
 	//   data.sink = gst_element_factory_make ("autoaudiosink", "sink"); //this is for audio
-	data.sink = gst_element_factory_make ("autovideosink", "sink");
-
+	// sink_0::zorder=1 sink_1::zorder=0
+	data.sink1 = gst_element_factory_make ("fpsdisplaysink", "sink1");
+	data.sink2 = gst_element_factory_make ("fpsdisplaysink", "sink2");
+	data.sink3 = gst_element_factory_make ("fpsdisplaysink", "sink3");
 	/**
 	 * 3) Create the empty pipeline
 	 **/
@@ -244,49 +249,100 @@ int main(int argc, char *argv[]) {
 	if (!data.pipeline) {
 		g_printerr ("pipeline could not be created.\n");
 		return -1;
-	}else if (!data.source) {
+	}else if (!data.source1 || !data.source2 || !data.source3) {
 		g_printerr ("source could not be created.\n");
 		return -1;
-	} else if (!data.sink) {
+	} else if (!data.sink1 || !data.sink2) {
 		g_printerr ("sink could not be created.\n");
 		return -1;
 	}else if (!data.convert) {
 		g_printerr ("converter could not be created.\n");
 		return -1;
+	}else if (!data.fpssink1 || !data.fpssink2 || !data.fpssink3) {
+		g_printerr ("fpssink could not be created.\n");
+		return -1;
+	}else if (!data.scale) {
+		g_printerr ("scale could not be created.\n");
+		return -1;
+	}else if (!data.filter) {
+		g_printerr ("filter could not be created.\n");
+		return -1;
+	}else if (!data.videobox1 || !data.videobox2 || !data.videobox3) {
+		g_printerr ("videobox could not be created.\n");
+		return -1;
+	}else if (!data.mixer1 || !data.mixer2 || !data.mixer3) {
+		g_printerr ("mixer could not be created.\n");
+		return -1;
 	}
 
 	/**
-	 * 5) Build the pipeline
+	* filtercaps
+	* video/x-raw,width=1280,height=720
+	*/
+	filtercaps = gst_caps_new_simple ("video/x-raw-yuv",
+          "width", G_TYPE_INT, 1280,
+          "height", G_TYPE_INT, 720
+          NULL);
+  g_object_set (G_OBJECT (filter), "caps", filtercaps, NULL);
+
+	/**
+	* Manually link the mixer, which has "Request" pads
+	* If you look at the documentation for the videomixer element,
+	* you'll see that videomixer's sink pads are request pads.
+	* You need to create these pads before linking them.
+	*/
+	mixer_sink_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (mixer1), "sink_%u");
+	mixer_sink_pad = gst_element_request_pad (mixer1, mixer_sink_pad_template, NULL, NULL);
+	sink_pad = gst_element_get_static_pad (clrspace, "src");
+	gst_pad_link ( sink_pad,mixer_sink_pad);
+
+	/**
+	 * 5) Build the pipeline or add all the elementas to the pipeline
 	 **/
 	// simple version:
 	//	pipeline = gst_parse_launch ("playbin uri=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm", NULL);
 	// building with multiple items
-	gst_bin_add_many (GST_BIN (data.pipeline), data.source, data.convert, data.sink, NULL);
+	gst_bin_add_many (GST_BIN (data.pipeline), data.source1, data.convert1, data.sink1, NULL);
 
 	/**
 	 * 6) check if the output (sink) and input (source) can be linked
 	 * or if the converter can be linked to the output
 	 **/
 	// always start with this
-	if (!gst_element_link (data.convert, data.sink)) {
+	if (!gst_element_link (data.convert1, data.sink1)) {
 		g_printerr ("converter and sink could not be linked.\n");
 		gst_object_unref (data.pipeline);
 		return -1;
 	}
-	//this is disabled if we use padding cause the external function pad_added_handler handles it
-//	if (gst_element_link (data.source, data.sink) != TRUE) {
-//		g_printerr ("source and sink could not be linked.\n");
-//		gst_object_unref (data.pipeline);
-//		return -1;
-//	}
 
 	/**
 	 * 7) Modify the source's properties
 	 * Properties are read from with g_object_get() and written to with g_object_set()
 	 **/
-	g_object_set (data.source, "pattern", 0, NULL);
-	// as an example Set the URI to play
-	g_object_set (data.source, "uri", "https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm", NULL);
+	 // videotestsrc pattern=snow
+	 g_object_set (G_OBJECT (data.source1), "pattern", snow, NULL);
+
+	 /* Add feature FPS for video-sink */
+  if (flag_fps) {
+    g_object_set (G_OBJECT (data.fpssink), "text-overlay", FALSE, "video-sink", sink, NULL); }
+
+		/* Link the elements together */
+  /* file-source -> h264-parser -> h264-decoder -> video-output */
+  if (flag_fps) {
+    if (gst_element_link_many (data.source1, data.filter, data.videobox1, data.mixer1, data.fpssink, NULL)) {
+      g_printerr ("Elements could not be linked.\n");
+      gst_object_unref (pipeline);
+      return -1;
+    }
+  } else {
+    if (gst_element_link_many (data.source1, data.filter, data.videobox1, data.mixer1, data.sink1, NULL) != TRUE) {
+      g_printerr ("Elements could not be linked.\n");
+      gst_object_unref (pipeline);
+      return -1;
+    }
+  }
+
+
 
 	/** 8) Connect to the pad-added signal
 	 * this is needed if there is a delay between the input stream and the data converted form the codex
