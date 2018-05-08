@@ -28,10 +28,10 @@ typedef struct _CustomData {
 	GstElement *convert;
 	GstElement *sink1, sink2;
 	GstElement *playbin;   /* the simple way to start a pipeline */
-	GstElement *scale,*filter;
+	GstElement *scale,*filter,tee;
 	GstElement *videobox1,*videobox2,*videobox3;
 	GstElement *mixer1,*mixer2,*mixer3;
-	GstElement **clrspace,*sink;
+	GstElement **clrspace,*sink, *video_queue;
 	gboolean playing;      /* Are we in the PLAYING state? */
 	gboolean terminate;    /* Should we terminate execution? */
 	gboolean seek_enabled; /* Is seeking enabled for this media? */
@@ -238,6 +238,9 @@ int main(int argc, char *argv[]) {
 	data.sink1 = gst_element_factory_make ("fpsdisplaysink", "sink1");
 	data.sink2 = gst_element_factory_make ("fpsdisplaysink", "sink2");
 	data.sink3 = gst_element_factory_make ("fpsdisplaysink", "sink3");
+	tee name=snow
+	data.tee = gst_element_factory_make ("tee", "snow");
+	video_queue = gst_element_factory_make ("queue", "video_queue");
 	/**
 	 * 3) Create the empty pipeline
 	 **/
@@ -302,6 +305,7 @@ int main(int argc, char *argv[]) {
 	// simple version:
 	//	pipeline = gst_parse_launch ("playbin uri=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm", NULL);
 	// building with multiple items
+	// has to be similar to the cli one
 	gst_bin_add_many (GST_BIN (data.pipeline), data.source1, data.convert1, data.sink1, NULL);
 
 	/**
@@ -349,6 +353,22 @@ int main(int argc, char *argv[]) {
 	 * this calls the external functions that handles the data
 	 **/
 	g_signal_connect (data.source, "pad-added", G_CALLBACK (pad_added_handler), &data);
+
+	/* Manually link the Tee, which has "Request" pads */
+	  tee_audio_pad = gst_element_get_request_pad (tee, "src_%u");
+	  g_print ("Obtained request pad %s for audio branch.\n", gst_pad_get_name (tee_audio_pad));
+	  queue_audio_pad = gst_element_get_static_pad (audio_queue, "sink");
+	  tee_video_pad = gst_element_get_request_pad (tee, "src_%u");
+	  g_print ("Obtained request pad %s for video branch.\n", gst_pad_get_name (tee_video_pad));
+	  queue_video_pad = gst_element_get_static_pad (video_queue, "sink");
+	  if (gst_pad_link (tee_audio_pad, queue_audio_pad) != GST_PAD_LINK_OK ||
+	      gst_pad_link (tee_video_pad, queue_video_pad) != GST_PAD_LINK_OK) {
+	    g_printerr ("Tee could not be linked.\n");
+	    gst_object_unref (pipeline);
+	    return -1;
+	  }
+	  gst_object_unref (queue_audio_pad);
+	  gst_object_unref (queue_video_pad);
 
 	/**
 	 * 9) Start playing
