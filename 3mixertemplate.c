@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
 	* filtercaps
 	* video/x-raw,width=1280,height=720
 	*/
-	filtercaps = gst_caps_new_simple ("video/x-raw-yuv",
+    filtercaps = gst_caps_new_simple ("video/x-raw-yuv",
           "width", G_TYPE_INT, 1280,
           "height", G_TYPE_INT, 720,
           NULL);
