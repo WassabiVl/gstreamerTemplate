@@ -1,0 +1,20 @@
+Linux
+  - should be able to use gst-tuio-setting to tune parameters and save it
+  - ui playback video out of sync. with the touch detected.
+  - save calibration data for gst-webcam-input
+  - browse video playback file for testing in gst-tuio-setting
+
+  - right click (long press to trigger it ?)
+  - infrared sensivity settings (display detected blob in the setting screen)
+  - act as a touchpad (relative x-y instead of absolute x-y)
+  - lighting condition test (autotune)
+  - on-screen drawing and zooming
+  - color tracking ?!
+  - gesture recognition
+  - change webcam properties for brightness and constrast
+
+
+windows
+  - lack of gst-tuio-setting since directdraw video input is not in mingw
+
+

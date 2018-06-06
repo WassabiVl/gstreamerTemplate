@@ -1,0 +1,1 @@
+/usr/bin/cc     CMakeFiles/gstreamerTemplate.dir/3mixertemplate.c.o CMakeFiles/gstreamerTemplate.dir/introduction.c.o CMakeFiles/gstreamerTemplate.dir/template_to_g-streamer.c.o CMakeFiles/gstreamerTemplate.dir/TutorialOfPlayBin.c.o  -o gstreamerTemplate -lgstsdp-1.0 -lgstvideo-1.0 -lgstapp-1.0 -lgstbase-1.0 -lgstreamer-1.0 -lgobject-2.0 -lglib-2.0 

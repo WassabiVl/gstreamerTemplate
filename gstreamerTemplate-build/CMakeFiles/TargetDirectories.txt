@@ -1,0 +1,3 @@
+/home/companion/Desktop/gstreamerTemplate-build/CMakeFiles/edit_cache.dir
+/home/companion/Desktop/gstreamerTemplate-build/CMakeFiles/rebuild_cache.dir
+/home/companion/Desktop/gstreamerTemplate-build/CMakeFiles/gstreamerTemplate.dir

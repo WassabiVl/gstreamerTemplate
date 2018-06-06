@@ -1,0 +1,56 @@
+gst-tuio - Gstreamer to tuio computer vision plugin
+********
+
+Copyright (C) 2010 Keith Mok <ek9852 at gmail.com>
+
+Usage as a cheap infrared electronic whiteboard
+===============================================
+1. Buy a webcam that can support frame rate up to 30fps at dark condition
+2. Unscrew the webcam and remove the infrared filter inside
+3. Put a film negative to act as a infrared pass only filter
+   (to block all visible light)
+4. Project computer screen using a projector
+5. Place your webcam towards the projector.
+6. Use an infrared emitter as a pen (a infrared remote controller should work).
+   You should point the pen towards and near (almost touch) the projected
+   screen and let the webcam to capture the reflected light from the screen.
+6. Adjust the distance between the webcam and projector, ensure all the screen
+   projected area can be captured by the webcam
+7. Run gst-tuio-setting, and tune the parameters, edit gst-webcam-input.conf
+   manully if necessary. (The UI would not save it now)
+8. Run gst-webcam-input
+9. Do the 4 points calibration for the projection
+
+
+Compilation and installation
+============================
+In order to compile gst-tuio you need following software packages:
+        - Gstreamer development library
+        - GTK Library
+        - XTST library
+        - X11 library
+        - Unique Library
+        - LIBLO Library
+
+To configure run:
+        ./configure --prefix=/usr 
+
+Configure automatically searches for all required components and packages.
+
+To compile and install run:
+        make && make install
+
+
+What is the different between Community Core Vision ?
+=====================================================
+The idea and setting layout are from Community Core Vision.
+But gst-tuio is completely rewritten and does not depends on OpenCV, and
+designed with optimization bare in mind.
+So much lower CPU usage (~10%) with my notebook running 1.83GHz
+
+
+Information
+===========
+For additional information about the project visit gst-tuio web site:
+        http://gst-tuio.sourceforge.net
+
