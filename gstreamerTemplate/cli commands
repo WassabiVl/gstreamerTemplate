@@ -82,3 +82,21 @@ videorate ! video/x-raw,framerate=15/1 ! videoconvert ! vp8enc ! rtpvp8pay ! udp
 ## the reciver
 gst-launch-1.0 -v udpsrc port=5000  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! videoconvert ! autovideosink
 
+
+## multiple ports
+gst-launch-1.0 -v videotestsrc pattern=ball background-color=0x00ff00 ! vp8enc ! rtpvp8pay ! udpsink port=5000
+gst-launch-1.0 -v videotestsrc pattern=snow background-color=0x00ff00 ! vp8enc ! rtpvp8pay ! udpsink port=5001
+gst-launch-1.0 -v videotestsrc pattern=pinwheel background-color=0x00ff00 ! vp8enc ! rtpvp8pay ! udpsink port=5002
+
+gst-launch-1.0 -v udpsrc port=5000  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green ! mixer.sink_0 \
+  udpsrc port=5001  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green target-r=0 target-b=0 target-g=0 black-sensitivity=128 white-sensitivity=0 ! mixer.sink_1 \
+  udpsrc port=5002  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=custom target-r=0 target-b=0 target-g	=0 black-sensitivity=128 white-sensitivity=0 ! mixer.sink_2 \
+  videomixer name=mixer sink_0::zorder=2 sink_1::zorder=1 sink_2::zorder=2 ! \
+  videoconvert ! autovideosink
+
+gst-launch-1.0 -v udpsrc port=5000  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green ! mixer.sink_1 \
+  udpsrc port=5001  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green ! mixer.sink_2 \
+  udpsrc port=5002  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green ! mixer.sink_3 \
+  videomixer name=mixer ! videoconvert ! xvimagesink
+
+gcc -Wall -fpermissive dynamic_sources.cpp -o dynamic_sources $(pkg-config --cflags --libs gstreamer-1.0)

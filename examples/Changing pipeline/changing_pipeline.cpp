@@ -27,6 +27,7 @@ event_probe_cb (GstPad * pad, GstPadProbeInfo * info, gpointer user_data)
     g_queue_push_tail (&effects, gst_object_ref (cur_effect));
     /* take next effect from the queue */
     next = g_queue_pop_head (&effects);
+
     if (next == NULL)
     {
         GST_DEBUG_OBJECT (pad, "no more effects");
@@ -139,7 +140,7 @@ main (int argc, char **argv)
     if (!g_option_context_parse (ctx, &argc, &argv, &err))
     {
         g_print ("Error initializing: %s\n", err->message);
-      //  g_clear_error (&amp, err);
+        //  g_clear_error (&amp, err);
         g_option_context_free (ctx);
         return 1;
     }
