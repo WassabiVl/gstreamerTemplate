@@ -85,7 +85,7 @@ gst-launch-1.0 -v udpsrc port=5000  caps="application/x-rtp" ! rtpvp8depay ! vp8
 
 ## multiple ports
 gst-launch-1.0 -v videotestsrc pattern=ball background-color=0x00ff00 ! vp8enc ! rtpvp8pay ! udpsink port=5000
-gst-launch-1.0 -v videotestsrc pattern=snow background-color=0x00ff00 ! vp8enc ! rtpvp8pay ! udpsink port=5001
+gst-launch-1.0 -v videotestsrc pattern=bar background-color=0x00ff00 ! vp8enc ! rtpvp8pay ! udpsink port=5001
 gst-launch-1.0 -v videotestsrc pattern=pinwheel background-color=0x00ff00 ! vp8enc ! rtpvp8pay ! udpsink port=5002
 
 gst-launch-1.0 -v udpsrc port=5000  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green ! mixer.sink_0 \
@@ -97,6 +97,11 @@ gst-launch-1.0 -v udpsrc port=5000  caps="application/x-rtp" ! rtpvp8depay ! vp8
 gst-launch-1.0 -v udpsrc port=5000  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green ! mixer.sink_1 \
   udpsrc port=5001  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green ! mixer.sink_2 \
   udpsrc port=5002  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green ! mixer.sink_3 \
-  videomixer name=mixer ! videoconvert ! xvimagesink
+  videomixer name=mixer ! videoconvert ! xvimagesink sync=false
+
+gst-launch-1.0 -v udpsrc port=5000  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green ! mixer.sink_1 \
+  udpsrc port=5001  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green ! mixer.sink_2 \
+  udpsrc port=5002  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! alpha method=green ! mixer.sink_3 \
+  videomixer name=mixer ! videoconvert ! xvimagesink sync=false
 
 gcc -Wall -fpermissive dynamic_sources.cpp -o dynamic_sources $(pkg-config --cflags --libs gstreamer-1.0)
