@@ -7,3 +7,9 @@ https://docs.djangoproject.com/en/2.0/intro/tutorial01/
 http://www.turbogears.org/
 
 https://markwingerd.wordpress.com/2014/11/20/using-gstreamer-with-python-part-2/
+
+##the sender
+./surface-streams/realsense -gstpipe "alpha method=green ! videorate ! video/x-raw,framerate=15/1 ! videoconvert ! vp8enc ! rtpvp8pay ! udpsink host=141.54.52.151 port=8880"
+
+## the reciver
+gst-launch-1.0 -v udpsrc port=6000  caps="application/x-rtp" ! rtpvp8depay ! vp8dec ! videoconvert ! autovideosink
