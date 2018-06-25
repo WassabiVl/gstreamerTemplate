@@ -76,7 +76,6 @@ int main (int argc, char **argv)
 
     GMainLoop *loop = g_main_loop_new (NULL, FALSE);
     gst_bus_add_watch (GST_ELEMENT_BUS (pipeline), bus_cb, loop);
-
     g_main_loop_run (loop);
 
     gst_element_set_state (pipeline, GST_STATE_NULL);
