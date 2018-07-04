@@ -9,7 +9,7 @@ http://www.turbogears.org/
 https://markwingerd.wordpress.com/2014/11/20/using-gstreamer-with-python-part-2/
 
 ##the sender
-./surface-streams/realsense -gstpipe "alpha method=green ! videorate ! video/x-raw, framerate=60/1  ! jpegenc quality=50 ! rtpgstpay config-interval=1  ! udpsink host=141.54.57.51 port=8880 sync=false"
+./surface-streams/realsense -gstpipe "! jpegenc quality=50 ! rtpgstpay config-interval=1 ! udpsink host=141.54.59.244 port=5000"
 
 ./surface-streams/realsense -gstpipe "videorate ! video/x-raw, framerate=60/1  ! jpegenc quality=50 ! rtpgstpay config-interval=1  ! udpsink host=141.54.57.51 port=8880 sync=false"
 ## the reciver
